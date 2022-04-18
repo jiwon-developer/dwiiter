@@ -1,11 +1,11 @@
 //MODEL
 import SQ from "sequelize";
-import { db, sequelize } from "../db/database.js";
+import { sequelize } from "../db/database.js";
 
 const DataTypes = SQ.DataTypes;
 
 //create user table and define schema
-const User = sequelize.define(
+export const User = sequelize.define(
   "user",
   {
     id: {

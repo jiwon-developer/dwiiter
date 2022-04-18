@@ -30,10 +30,8 @@ app.use((error, req, res, next) => {
 });
 
 //connection  to sequelize
-sequelize.sync().then((client) => {
-  console.log(client);
+sequelize.sync().then(() => {
+  //socketIo
+  const server = app.listen(config.host.port);
+  initSocket(server);
 });
-
-//socketIo
-const server = app.listen(config.host.port);
-initSocket(server);
