@@ -1,13 +1,13 @@
 import express from "express";
+import "express-async-error";
 import cors from "cors";
 import morgan from "morgan"; // for debugging
 import helmet from "helmet"; // for security
 import tweetsRoute from "./router/tweets.js";
 import authRoute from "./router/auth.js";
-import "express-async-error";
 import { config } from "./config.js";
 import { initSocket } from "./connection/socket.js";
-import { db } from "./db/database.js";
+///import { db } from "./db/database.js";
 
 const app = express();
 
@@ -30,7 +30,7 @@ app.use((error, req, res, next) => {
 });
 
 // DB connection => model에서 처리만해주면 끝
-db.getConnection().then((connection) => console.log("db connected"));
+//db.getConnection().then((connection) => console.log("db connected"));
 
 //socketIo
 const server = app.listen(config.host.port);
