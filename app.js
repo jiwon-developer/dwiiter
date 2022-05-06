@@ -7,7 +7,7 @@ import tweetsRoute from "./router/tweets.js";
 import authRoute from "./router/auth.js";
 import { config } from "./config.js";
 import { initSocket } from "./connection/socket.js";
-///import { db } from "./db/database.js";
+import { connectDB } from "./database/database.js";
 
 const app = express();
 
@@ -29,23 +29,11 @@ app.use((error, req, res, next) => {
   res.sendStatus(500);
 });
 
-// DB connection => model에서 처리만해주면 끝
-//db.getConnection().then((connection) => console.log("db connected"));
-
-//socketIo
-const server = app.listen(config.host.port);
-initSocket(server);
-
-// const socketIO = new Server(server, {
-//   cors: {
-//     origin: "*",
-//   },
-// });
-
-// socketIO.on("connection", (socket) => {
-//   console.log("Client is here!");
-// });
-
-// setInterval(() => {
-//   socketIO.emit("dwitter", "hello!");
-// }, 1000);
+//DB Connection
+connectDB()
+  .then(() => {
+    console.log("init!");
+    const server = app.listen(config.host.port);
+    initSocket(server);
+  })
+  .catch(console.error);

@@ -1,70 +1,88 @@
 // Model-manage data
 
 import * as userRepository from "../data/auth.js";
-//import { db } from "../db/database.js";
-let tweets = [
-  {
-    id: "1",
-    text: "dream coding fighting!",
-    createdAt: new Date().toString(),
-    userId: "1",
-  },
-  {
-    id: "2",
-    text: "Hello !",
-    createdAt: new Date().toString(),
-    userId: "1",
-  },
-];
+import { getTweets, getUsers } from "../database/database.js";
+import MongoDb from "mongodb";
 
+//NO SQL - 서로 관계X  : (정보의 중복 > 관계)
+// 프로필 DB
+// 사용자의 문서 DB: 서버 1, 서버2 ,서버 3
+// 관계형 조인쿼리의 성능이 좋지 않다.
+
+//SQL : 관계형
+//조인쿼리의 성능이 좋음
+
+const ObjectId = MongoDb.ObjectId;
 export async function getAll() {
-  return Promise.all(
-    tweets.map(async (tweet) => {
-      const { username, name, url } = await userRepository.findById(
-        tweet.userId
-      );
-
-      return { ...tweet, username, name, url };
-    })
-  );
+  return getTweets().find({}).sort({ createdAt: -1 }).toArray().then(mapTweets);
 }
 
 export async function getAllByUsername(username) {
-  return getAll().then((tweets) =>
-    tweets.filter((tweet) => tweet.username === username)
-  );
+  return getTweets()
+    .find({ username })
+    .sort({ createdAt: -1 })
+    .toArray()
+    .then(mapTweets);
 }
 
 export async function getById(id) {
-  const found = tweets.find((tweet) => tweet.id === id);
-  if (!found) {
-    return null;
-  }
-  const { username, name, url } = await userRepository.findById(found.userId);
-
-  return { ...found, username, name, url };
+  return getTweets()
+    .findOne({ _id: new ObjectId(id) })
+    .then((data) => {
+      const tweets = mapOptionalTweet(data);
+      return tweets;
+    });
 }
 
 export async function create(text, userId) {
+  const { name, username, url } = await userRepository.findById(userId);
+
   const tweet = {
-    id: Date.now().toString(),
     text,
     createdAt: new Date(),
     userId,
+    name: name,
+    username: username,
+    url: url,
   };
 
-  tweets = [tweet, ...tweets];
-  return getById(tweet.id);
+  return getTweets()
+    .insertOne(tweet)
+    .then((data) => {
+      const newTweet = mapOptionalTweet({ ...tweet, _id: data.insertedId });
+      console.log(newTweet);
+      return newTweet;
+    });
 }
 
 export function update(id, text) {
-  const tweet = tweets.find((tweet) => tweet.id === id);
-  if (tweet) {
-    tweet.text = text;
-  }
-  return getById(id);
+  const filter = { _id: new ObjectId(id) };
+
+  // create a document that sets the plot of the movie
+  const updateDoc = { $set: { text } };
+  const option = { returnDocument: "after" }; // return updated data / Default : before
+  return getTweets()
+    .findOneAndUpdate(filter, updateDoc, option)
+    .then((result) => mapOptionalTweet({ ...result.value }));
 }
 
 export function remove(id) {
-  tweets = tweets.filter((tweet) => tweet.id !== id);
+  // tweets = tweets.filter((tweet) => tweet.id !== id);
+
+  return getTweets().deleteOne({ _id: new ObjectId(id) });
+  // .then((result) => {
+  //   if (result.deletedCount === 1) {
+  //     console.log("Successfully deleted one document.");
+  //   } else {
+  //     console.log("No documents matched the query. Deleted 0 documents.");
+  //   }
+  // });
+}
+
+function mapOptionalTweet(tweet) {
+  return tweet ? { ...tweet, id: tweet._id.toString() } : tweet;
+}
+/// param: tweet array to create id properties
+function mapTweets(tweets) {
+  return tweets.map(mapOptionalTweet);
 }
