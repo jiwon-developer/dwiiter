@@ -6,9 +6,7 @@ import MongoDb from "mongodb";
 const ObjectId = MongoDb.ObjectId;
 
 export async function findByUsername(username) {
-  return getUsers()
-    .findOne({ username }) //
-    .then(mapOptionalUser);
+  return getUsers().findOne({ username }).then(mapOptionalUser);
 }
 
 export async function findById(id) {
