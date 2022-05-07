@@ -1,8 +1,8 @@
 // Model-manage data
 
+import Mongoose from "mongoose";
 import * as userRepository from "../data/auth.js";
-import { getTweets, getUsers } from "../database/database.js";
-import MongoDb from "mongodb";
+import { useVirtualId } from "../database/database.js";
 
 //NO SQL - 서로 관계X  : (정보의 중복 > 관계)
 // 프로필 DB
@@ -12,77 +12,49 @@ import MongoDb from "mongodb";
 //SQL : 관계형
 //조인쿼리의 성능이 좋음
 
-const ObjectId = MongoDb.ObjectId;
+//schema
+const tweetSchema = new Mongoose.Schema(
+  {
+    text: { type: String, required: true },
+    userId: { type: String, required: true },
+    name: { type: String, required: true },
+    username: { type: String, required: true },
+    url: String,
+  },
+  { timestamps: true }
+);
+
+useVirtualId(tweetSchema);
+const Tweet = Mongoose.model("Tweet", tweetSchema);
+
 export async function getAll() {
-  return getTweets().find({}).sort({ createdAt: -1 }).toArray().then(mapTweets);
+  return Tweet.find().sort({ createdAt: -1 });
 }
 
 export async function getAllByUsername(username) {
-  return getTweets()
-    .find({ username })
-    .sort({ createdAt: -1 })
-    .toArray()
-    .then(mapTweets);
+  return Tweet.find({ username }).sort({ createdAt: -1 });
 }
 
 export async function getById(id) {
-  return getTweets()
-    .findOne({ _id: new ObjectId(id) })
-    .then((data) => {
-      const tweets = mapOptionalTweet(data);
-      return tweets;
-    });
+  return Tweet.findById(id);
 }
 
 export async function create(text, userId) {
-  const { name, username, url } = await userRepository.findById(userId);
-
-  const tweet = {
-    text,
-    createdAt: new Date(),
-    userId,
-    name: name,
-    username: username,
-    url: url,
-  };
-
-  return getTweets()
-    .insertOne(tweet)
-    .then((data) => {
-      const newTweet = mapOptionalTweet({ ...tweet, _id: data.insertedId });
-      console.log(newTweet);
-      return newTweet;
-    });
+  return userRepository.findById(userId).then((user) =>
+    new Tweet({
+      text,
+      userId,
+      name: user.name,
+      username: user.username,
+      url: user.url,
+    }).save()
+  );
 }
 
 export function update(id, text) {
-  const filter = { _id: new ObjectId(id) };
-
-  // create a document that sets the plot of the movie
-  const updateDoc = { $set: { text } };
-  const option = { returnDocument: "after" }; // return updated data / Default : before
-  return getTweets()
-    .findOneAndUpdate(filter, updateDoc, option)
-    .then((result) => mapOptionalTweet({ ...result.value }));
+  return Tweet.findByIdAndUpdate(id, { text }, { returnOriginal: false });
 }
 
 export function remove(id) {
-  // tweets = tweets.filter((tweet) => tweet.id !== id);
-
-  return getTweets().deleteOne({ _id: new ObjectId(id) });
-  // .then((result) => {
-  //   if (result.deletedCount === 1) {
-  //     console.log("Successfully deleted one document.");
-  //   } else {
-  //     console.log("No documents matched the query. Deleted 0 documents.");
-  //   }
-  // });
-}
-
-function mapOptionalTweet(tweet) {
-  return tweet ? { ...tweet, id: tweet._id.toString() } : tweet;
-}
-/// param: tweet array to create id properties
-function mapTweets(tweets) {
-  return tweets.map(mapOptionalTweet);
+  return Tweet.findByIdAndDelete(id);
 }
